@@ -4,20 +4,18 @@ import datetime
 import os
 
 # ==========================================
-# 1. 配置区域 (记得填回您的 Key)
+# 1. 配置区域 (云端安全版)
 # ==========================================
 
-# 【请在这里填回您之前的 Key】
-API_KEY = "sk-xx"
+# 以前是直接写在代码里，现在改成从云端保险箱(secrets)里读取
+# 这里的 "MIMO_API_KEY" 必须和你在 Streamlit Secrets 里填的名字一样
+API_KEY = st.secrets["MIMO_API_KEY"] 
 
-# Mimo 服务地址 (通常不用变)
-BASE_URL = "https://api.xiaomimimo.com/v1"
-
-# 模型名称 (使用最新的 Flash 版)
+# 这里的地址不用变
+BASE_URL = "https://api.xiaomimimo.com/v1" 
 MODEL_NAME = "mimo-v2-flash"
 
 client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
-
 
 # ==========================================
 # 2. 核心功能函数
@@ -138,3 +136,4 @@ with tab2:
 
     else:
         st.warning("👋 还没有计划，点击上面的按钮生成一份吧！")
+
