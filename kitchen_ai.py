@@ -162,14 +162,21 @@ with tab2:
             要求：
             1. 必须输出为 Markdown 表格。
             2. 表格列为：星期、早餐、午餐、晚餐。
-            3. 菜品要家常、易购买。
-            4. 表格下方给一段简短的【本周营养重点】。
+            3. 如果一顿饭有多个菜，请用中文顿号（、）分隔，不要使用 <br> 或换行符。
+            4. 菜品要家常、易购买。
+            5. 表格下方给一段简短的【本周营养重点】。
             """
             plan_res = get_ai_response("你是专业的营养师", prompt)
             
-            # 存入 session_state 这样刷新不会丢（直到关闭网页）
+            # ==========================================
+            # 🧹 强力清洗代码：这里是专门去 <br> 的
+            # ==========================================
+            # 无论 AI 听不听话，我们都强制把 <br> 替换成顿号
+            plan_res = plan_res.replace("<br>", "、").replace("<br/>", "、")
+            
+            # 存入 session_state
             st.session_state['week_plan'] = plan_res
-            st.rerun() # 重新加载以显示结果
+            st.rerun() # 刷新页面
 
     # 显示结果
     if 'week_plan' in st.session_state:
@@ -179,6 +186,7 @@ with tab2:
         st.markdown("---")
         st.markdown("📋 **长按下面的文字复制，发到微信群里保存：**")
         st.code(st.session_state['week_plan'], language=None)
+
 
 # --- 功能三：买菜清单 (新增功能) ---
 with tab3:
@@ -207,4 +215,5 @@ with tab3:
         st.markdown(st.session_state['shop_list'])
         st.markdown("📋 **点击右上角复制图标，或者长按复制：**")
         st.code(st.session_state['shop_list'], language=None)
+
 
