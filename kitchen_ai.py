@@ -106,7 +106,7 @@ with st.sidebar:
 # ==========================================
 
 st.title("🏡 爸妈的幸福餐桌")
-st.caption("💖 儿子/女儿用 AI 为你们定制的私人小厨房")
+st.caption("💖 笑笑用 AI 为你们定制的私人小厨房")
 
 # 获取当前时间，送上问候
 hour = datetime.datetime.now().hour
@@ -215,5 +215,6 @@ with tab3:
         st.markdown(st.session_state['shop_list'])
         st.markdown("📋 **点击右上角复制图标，或者长按复制：**")
         st.code(st.session_state['shop_list'], language=None)
+
 
 
