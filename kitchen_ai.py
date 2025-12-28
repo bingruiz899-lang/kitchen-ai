@@ -12,7 +12,7 @@ import os
 API_KEY = st.secrets["MIMO_API_KEY"] 
 
 # 这里的地址不用变
-BASE_URL = "https://api.xiaomimimo.com/v1" 
+BASE_URL = "https://api.siliconflow.cn/v1"
 MODEL_NAME = "mimo-v2-flash"
 
 client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
@@ -136,4 +136,5 @@ with tab2:
 
     else:
         st.warning("👋 还没有计划，点击上面的按钮生成一份吧！")
+
 
