@@ -1,144 +1,210 @@
 import streamlit as st
 from openai import OpenAI
 import datetime
-import os
 
 # ==========================================
-# 1. 配置区域 (云端安全版)
+# 1. 配置区域 (保持云端配置不变)
 # ==========================================
+# 依然从 Secrets 读取密码，安全第一
+if "MIMO_API_KEY" in st.secrets:
+    API_KEY = st.secrets["MIMO_API_KEY"]
+else:
+    # 兼容本地运行，如果没有 secrets 则使用空字符串防报错
+    API_KEY = "" 
 
-# 必须是从 Secrets 里读取 (不要写死，也不要留空)
-API_KEY = st.secrets["MIMO_API_KEY"] 
-
-# 必须是刚才测试成功的地址 (不能是 siliconflow，也不能是 minimax)
-BASE_URL = "https://api.xiaomimimo.com/v1" 
-
-# 必须是测试成功的模型名
+BASE_URL = "https://api.xiaomimimo.com/v1"
 MODEL_NAME = "mimo-v2-flash"
 
-client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
-
+# 初始化客户端
+if API_KEY:
+    client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
+else:
+    st.error("⚠️ 还没检测到 API Key，请检查 Secrets 设置！")
+    st.stop()
 
 # ==========================================
-# 2. 核心功能函数
+# 2. 核心大厨逻辑
 # ==========================================
 
-def get_ai_response(prompt):
-    """发送指令给 Mimo 并获取回复"""
+def get_ai_response(system_role, user_prompt):
+    """通用的 AI 调用函数"""
     try:
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
-                # 修改点：System Prompt 设定角色为“孝顺的孩子”兼“营养师”
-                {"role": "system",
-                 "content": "你是一个专业的家庭营养师，也是用户孝顺的子女。请为爸爸妈妈规划饮食。回答要充满关怀，格式必须严格遵守要求。"},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": system_role},
+                {"role": "user", "content": user_prompt}
             ],
             temperature=0.7,
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"❌ 出错啦：{str(e)}。\n请检查代码里的 API_KEY 是否填对了。"
-
-
-def save_weekly_plan(plan_text):
-    with open("weekly_plan.txt", "w", encoding="utf-8") as f:
-        f.write(plan_text)
-
-
-def load_weekly_plan():
-    if os.path.exists("weekly_plan.txt"):
-        with open("weekly_plan.txt", "r", encoding="utf-8") as f:
-            return f.read()
-    return None
-
+        return f"❌ 哎呀，网络有点小差错：{str(e)}"
 
 # ==========================================
-# 3. 界面显示
+# 3. 页面美化与设置 (关怀模式)
 # ==========================================
 
-st.set_page_config(page_title="爸妈的专属营养师", page_icon="❤️")
+st.set_page_config(page_title="爸妈的幸福餐桌", page_icon="🍲", layout="wide")
 
-# 标题改为更亲切的称呼
-st.title("❤️ 爸妈的专属营养师")
-st.caption(f"由 Xiaomi {MODEL_NAME} 提供智力支持")
+# 🎨 注入 CSS 样式：把字变大，按钮变大，适合长辈阅读
+st.markdown("""
+    <style>
+    /* 全局字体加大 */
+    html, body, [class*="css"] {
+        font-family: 'Helvetica Neue', sans-serif;
+    }
+    div.stMarkdown p {
+        font-size: 1.2rem !important; /* 正文大号字 */
+        line-height: 1.8 !important;
+    }
+    h1 { color: #FF4B4B; }
+    h2, h3 { color: #333333; }
+    
+    /* 按钮样式优化 */
+    .stButton>button {
+        width: 100%;
+        border-radius: 10px;
+        height: 3em;
+        font-size: 20px !important;
+        font-weight: bold;
+    }
+    
+    /* 表格样式 */
+    table {
+        width: 100%;
+        font-size: 1.1rem !important;
+    }
+    th {
+        background-color: #f0f2f6;
+        color: #31333F;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-tab1, tab2 = st.tabs(["🥘 冰箱里有啥？(做菜灵感)", "📅 本周吃什么？(三餐表格)"])
+# ==========================================
+# 4. 侧边栏：口味遥控器
+# ==========================================
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/2921/2921822.png", width=100)
+    st.header("⚙️ 爸妈的口味设置")
+    st.markdown("不用打字，点这里调整口味👇")
+    
+    # 这种选择框比打字方便
+    taste_pref = st.selectbox(
+        "最近口味偏好：",
+        ["清淡养生 (少油盐)", "开胃下饭 (微辣)", "软烂易嚼 (护牙齿)", "强身健体 (高蛋白)"]
+    )
+    
+    cook_time = st.radio(
+        "做饭想花多久？",
+        ["简单快手 (20分钟)", "精心烹饪 (1小时)", "老火靓汤 (慢炖)"]
+    )
 
-# --- 功能一：智能菜谱 (保持不变，微调语气) ---
+# ==========================================
+# 5. 主界面内容
+# ==========================================
+
+st.title("🏡 爸妈的幸福餐桌")
+st.caption("💖 儿子/女儿用 AI 为你们定制的私人小厨房")
+
+# 获取当前时间，送上问候
+hour = datetime.datetime.now().hour
+greeting = "早安" if hour < 11 else "午安" if hour < 17 else "晚上好"
+st.success(f"👴👵 爸妈{greeting}！今天想吃点什么呢？当前设定：**{taste_pref}**")
+
+tab1, tab2, tab3 = st.tabs(["🥘 冰箱有啥 (做菜)", "📅 一周安排 (计划)", "📝 买菜清单 (助手)"])
+
+# --- 功能一：做菜灵感 ---
 with tab1:
-    st.markdown("### 💡 爸妈，告诉我冰箱里有啥，我教你们做！")
-
-    ingredients = st.text_input("在这里输入食材（比如：豆腐、绞肉、一点韭菜）：", placeholder="点这里输入...")
-
-    if st.button("帮我想个菜谱 ✨", type="primary"):
+    st.markdown("### 🥕 冰箱里剩啥菜了？")
+    st.markdown("告诉我一两样食材，我来教你们怎么搭配最好吃！")
+    
+    # 预设一些常见食材标签，点击自动填入（Streamlit原生不支持点击填入，这里用更简单的多选）
+    # 但为了简单，还是保留输入框，配上大字体提示
+    ingredients = st.text_input("在这里打字，或者语音输入：", placeholder="例如：鸡蛋、豆腐...")
+    
+    if st.button("🍳 帮我想个做法"):
         if not ingredients:
-            st.warning("⚠️ 爸妈，先输入一点食材哦！")
+            st.warning("⚠️ 爸妈，先输入食材哦！")
         else:
-            with st.spinner('正在翻阅食谱...'):
+            with st.spinner('大厨正在翻菜谱...'):
                 prompt = f"""
-                爸爸妈妈手里有这些食材：{ingredients}。
-                请推荐一道适合老年人吃的家常菜。
-                要求：
-                1. 语气亲切，称呼“爸爸妈妈”。
-                2. 详细列出【准备工作】、【烹饪步骤】(标明火候)。
-                3. 最后加一个【儿女的温馨提示】(关于营养或口感)。
+                我父母想用【{ingredients}】做菜。
+                他们的口味偏好是：{taste_pref}。
+                时间要求：{cook_time}。
+                
+                请推荐一道菜，格式要求：
+                1. 菜名（好听一点）。
+                2. 为什么推荐（结合健康功效）。
+                3. 做法（大白话，不要专业术语，分步骤）。
+                4. 温馨提示（关于火候或调味）。
                 """
-                result = get_ai_response(prompt)
-                st.markdown(result)
+                res = get_ai_response("你是一个贴心的家庭厨师长", prompt)
+                st.info("👇 推荐做法来啦")
+                st.markdown(res)
 
-# --- 功能二：周计划 (重大升级：表格+三餐+评分) ---
+# --- 功能二：周计划 ---
 with tab2:
-    st.markdown("### 🗓️ 本周三餐健康规划表")
+    st.markdown("### 🗓️ 本周三餐规划")
+    st.markdown("点一下按钮，生成一周不重样的健康菜单。")
+    
+    col_plan_btn, col_copy_btn = st.columns([1,1])
+    
+    with col_plan_btn:
+        generate_btn = st.button("🔄 生成新菜单")
+    
+    if generate_btn:
+        with st.spinner('正在计算营养搭配，请稍等...'):
+            prompt = f"""
+            请为我的父母制定【本周7天的三餐计划】。
+            口味要求：{taste_pref}。
+            要求：
+            1. 必须输出为 Markdown 表格。
+            2. 表格列为：星期、早餐、午餐、晚餐。
+            3. 菜品要家常、易购买。
+            4. 表格下方给一段简短的【本周营养重点】。
+            """
+            plan_res = get_ai_response("你是专业的营养师", prompt)
+            
+            # 存入 session_state 这样刷新不会丢（直到关闭网页）
+            st.session_state['week_plan'] = plan_res
+            st.rerun() # 重新加载以显示结果
 
-    weekdays = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
-    today_index = datetime.datetime.now().weekday()
-    today_str = weekdays[today_index]
+    # 显示结果
+    if 'week_plan' in st.session_state:
+        st.markdown(st.session_state['week_plan'])
+        
+        # 准备一段方便复制的纯文本
+        st.markdown("---")
+        st.markdown("📋 **长按下面的文字复制，发到微信群里保存：**")
+        st.code(st.session_state['week_plan'], language=None)
 
-    st.info(f"今天是：**{today_str}**，记得按时吃饭哦！")
-
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        if st.button("🔄 生成本周三餐计划表格"):
-            with st.spinner('正在计算营养搭配，绘制表格中...'):
-                # --- 这里是核心修改：指令非常具体，要求表格格式 ---
-                prompt = """
-                请为我的爸爸妈妈制定【本周7天的三餐计划】。
-
-                【核心要求】：
-                1. 必须覆盖【早餐、午餐、晚餐】。
-                2. 必须以【Markdown 表格】的形式输出，方便阅读。
-                3. 菜色要软烂易消化，少油少盐，适合老年人，且每天不重样。
-
-                【输出格式要求】：
-                第一部分：Markdown表格
-                | 星期 | 早餐 (清淡营养) | 午餐 (丰富主食) | 晚餐 (易消化) |
-                |---|---|---|---|
-                | 星期一 | ... | ... | ... |
-                ... (直到星期日)
-
-                第二部分：本周营养分析报告
-                1. **营养丰富度评分**：(给出一个0-100的分数)
-                2. **营养师点评**：(分析本周蛋白质、维生素摄入情况，指出亮点)
-                3. **给爸妈的话**：(一句温馨的叮嘱)
-                """
-
-                plan_result = get_ai_response(prompt)
-                save_weekly_plan(plan_result)
-                st.session_state['weekly_plan'] = plan_result
-                st.success("新菜单已生成！")
-
-    # 显示计划内容
-    current_plan = load_weekly_plan()
-
-    if current_plan:
-        st.divider()
-        # 直接使用 markdown 渲染，它会自动把 Markdown 文本变成漂亮的表格
-        st.markdown(current_plan)
-
+# --- 功能三：买菜清单 (新增功能) ---
+with tab3:
+    st.markdown("### 🛒 照着这个去超市")
+    
+    if 'week_plan' not in st.session_state:
+        st.info("👈 请先去【一周安排】那个页面生成菜单，然后回来这里，我就能列出清单啦！")
     else:
-        st.warning("👋 还没有计划，点击上面的按钮生成一份吧！")
+        if st.button("📝 根据菜单生成购物清单"):
+            with st.spinner('正在整理清单...'):
+                plan_content = st.session_state['week_plan']
+                prompt = f"""
+                基于这份菜单：
+                {plan_content}
+                
+                请整理一份【购物清单】。
+                1. 按分类排列（蔬菜区、肉类区、干货调料区）。
+                2. 只列出主要食材，不要列盐糖油这种家里常备的。
+                3. 格式简洁，方便手机查看。
+                """
+                shop_list = get_ai_response("你是精打细算的管家", prompt)
+                st.session_state['shop_list'] = shop_list
+                st.rerun()
 
-
-
+    if 'shop_list' in st.session_state:
+        st.markdown(st.session_state['shop_list'])
+        st.markdown("📋 **点击右上角复制图标，或者长按复制：**")
+        st.code(st.session_state['shop_list'], language=None)
 
