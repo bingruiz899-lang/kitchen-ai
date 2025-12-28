@@ -7,15 +7,17 @@ import os
 # 1. 配置区域 (云端安全版)
 # ==========================================
 
-# 以前是直接写在代码里，现在改成从云端保险箱(secrets)里读取
-# 这里的 "MIMO_API_KEY" 必须和你在 Streamlit Secrets 里填的名字一样
+# 必须是从 Secrets 里读取 (不要写死，也不要留空)
 API_KEY = st.secrets["MIMO_API_KEY"] 
 
-# 这里的地址不用变
-BASE_URL = "https://api.siliconflow.cn/v1"
-MODEL_NAME = "xiaomi/mimo-v2-flash"
+# 必须是刚才测试成功的地址 (不能是 siliconflow，也不能是 minimax)
+BASE_URL = "https://api.xiaomimimo.com/v1" 
+
+# 必须是测试成功的模型名
+MODEL_NAME = "mimo-v2-flash"
 
 client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
+
 
 # ==========================================
 # 2. 核心功能函数
@@ -136,6 +138,7 @@ with tab2:
 
     else:
         st.warning("👋 还没有计划，点击上面的按钮生成一份吧！")
+
 
 
 
